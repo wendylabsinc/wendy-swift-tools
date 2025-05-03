@@ -3,7 +3,7 @@ set -e
 
 # Variables
 SWIFT_PKG_URL="https://download.swift.org/swift-6.1-release/xcode/swift-6.1-RELEASE/swift-6.1-RELEASE-osx.pkg"
-EDGE_SDK_URL="https://github.com/edgeengineer/edge-swift-sdk/releases/download/v0.1-pre-release/6.1-RELEASE_edgeos_aarch64.artifactbundle.tar.gz"
+EDGE_SDK_URL="https://github.com/edgeengineer/edge-swift-tools/releases/download/v0.1-pre-release/6.1-RELEASE_edgeos_aarch64.artifactbundle.tar.gz"
 
 SWIFT_PKG_FILE="$(basename $SWIFT_PKG_URL)"
 EDGE_SDK_FILE="$(basename $EDGE_SDK_URL)"

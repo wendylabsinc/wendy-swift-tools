@@ -3,7 +3,7 @@ set -e
 
 # Variables
 SWIFT_PKG_URL="https://download.swift.org/swift-6.2.1-release/xcode/swift-6.2.1-RELEASE/swift-6.2.1-RELEASE-osx.pkg"
-WENDY_SDK_URL="https://github.com/wendylabsinc/wendy-swift-tools/releases/download/v0.2-pre-release/6.2.1-RELEASE_wendyos_aarch64.artifactbundle.tar.gz"
+WENDY_SDK_URL="https://github.com/wendylabsinc/wendy-swift-tools/releases/download/v0.2-pre-release/6.2.1-RELEASE_wendyos_aarch64.artifactbundle.zip"
 
 SWIFT_PKG_FILE="$(basename $SWIFT_PKG_URL)"
 WENDY_SDK_FILE="$(basename $WENDY_SDK_URL)"

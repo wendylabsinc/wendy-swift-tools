@@ -26,11 +26,11 @@ xattr -d -r com.apple.quarantine "./$WENDY_SDK_FILE"
 
 # Remove existing Wendy SDK if installed
 echo "Removing existing Wendy SDK if present..."
-xcrun --toolchain swift-6.1-RELEASE swift sdk remove "$WENDY_SDK_NAME" || true
+xcrun --toolchain swift-6.2.1-RELEASE swift sdk remove "$WENDY_SDK_NAME" || true
 
 # Install the Wendy SDK via swift toolchain
 echo "Installing Wendy SDK..."
-xcrun --toolchain swift-6.1-RELEASE swift sdk install "$WENDY_SDK_FILE"
+xcrun --toolchain swift-6.2.1-RELEASE swift sdk install "$WENDY_SDK_FILE"
 
 # Cleanup downloaded files upon successful installation
 echo "Cleaning up downloaded files..."

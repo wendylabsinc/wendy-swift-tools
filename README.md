@@ -27,17 +27,21 @@ cd wendy-swift-tools
 You can specify a release tag to install a specific version:
 
 ```bash
+# Install 0.3.0 (Swift 6.2.1) - default
+./scripts/install.sh 0.3.0
+
+# Install v0.2-pre-release (Swift 6.2)
+./scripts/install.sh v0.2-pre-release
+
 # Install v0.1-pre-release (Swift 6.1)
 ./scripts/install.sh v0.1-pre-release
-
-# Install v0.2-pre-release (Swift 6.2) - default
-./scripts/install.sh v0.2-pre-release
 ```
 
 ### Available Releases
 
 | Release Tag | Swift Version | SDK Architecture |
 |------------|---------------|------------------|
+| 0.3.0 | 6.2.1 | wendyos_aarch64 |
 | v0.2-pre-release | 6.2 | wendyos_aarch64 |
 | v0.1-pre-release | 6.1 | wendyos_aarch64 |
 
@@ -61,10 +65,10 @@ After installation, you can use the Wendy SDK with Swift:
 
 ```bash
 # List installed SDKs
-xcrun --toolchain swift-6.2-RELEASE swift sdk list
+xcrun --toolchain swift-6.2.1-RELEASE swift sdk list
 
 # Build for Wendy OS
-xcrun --toolchain swift-6.2-RELEASE swift build --sdk 6.2-RELEASE_wendyos_aarch64
+xcrun --toolchain swift-6.2.1-RELEASE swift build --sdk 6.2.1-RELEASE_wendyos_aarch64
 ```
 
 ## Contributing

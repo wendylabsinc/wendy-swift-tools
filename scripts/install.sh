@@ -2,14 +2,14 @@
 set -e
 
 # Default tag (latest release)
-DEFAULT_TAG="v0.2-pre-release"
+DEFAULT_TAG="0.3.0"
 TAG="${1:-$DEFAULT_TAG}"
 
 # Show usage
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Usage: $0 [TAG]"
     echo "  TAG: GitHub release tag to use (default: $DEFAULT_TAG)"
-    echo "  Example: $0 v0.1-pre-release"
+    echo "  Example: $0 0.3.0"
     exit 0
 fi
 

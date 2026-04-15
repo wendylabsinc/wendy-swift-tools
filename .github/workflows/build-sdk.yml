@@ -79,7 +79,7 @@ jobs:
           repository: swiftlang/swift-sdk-generator
 
       - name: Install build dependencies
-        run: apt-get update -y && apt-get install -y libsqlite3-dev xz-utils locales locales-all
+        run: apt-get update -y && apt-get install -y libsqlite3-dev xz-utils locales locales-all rsync patchelf
 
       - name: Build SDK
         env:

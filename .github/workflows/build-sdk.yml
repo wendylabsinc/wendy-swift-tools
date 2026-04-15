@@ -78,6 +78,9 @@ jobs:
         with:
           repository: swiftlang/swift-sdk-generator
 
+      - name: Install build dependencies
+        run: apt-get update -y && apt-get install -y libsqlite3-dev
+
       - name: Build SDK
         env:
           SWIFT_VERSION: ${{ needs.check-version.outputs.swift_version }}

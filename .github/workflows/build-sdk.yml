@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       swift_version:
-        description: 'Swift version override (e.g. 6.3.0)'
+        description: 'Swift version override matching the swift.org tag (e.g. 6.3, not 6.3.0)'
         required: false
         type: string
 
@@ -42,8 +42,8 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::Swift version '${VERSION}' does not match expected X.Y.Z format"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "::error::Swift version '${VERSION}' does not match expected X.Y or X.Y.Z format"
             exit 1
           fi
 

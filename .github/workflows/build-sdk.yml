@@ -1,0 +1,136 @@
+name: Build Swift Linux SDK
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      swift_version:
+        description: 'Swift version override (e.g. 6.3.0)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  check-version:
+    name: Check latest Swift version
+    runs-on: ubuntu-latest
+    outputs:
+      swift_version: ${{ steps.detect.outputs.swift_version }}
+      should_build: ${{ steps.detect.outputs.should_build }}
+    steps:
+      - name: Detect version and check tag
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SWIFT_VERSION_INPUT: ${{ inputs.swift_version }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${SWIFT_VERSION_INPUT}" ]; then
+            VERSION="${SWIFT_VERSION_INPUT}"
+          else
+            VERSION=$(curl -fsSL https://www.swift.org/api/v1/install/releases.json \
+              | jq -r 'sort_by(.date) | last | .name')
+          fi
+
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "::error::Failed to detect Swift version from swift.org API"
+            exit 1
+          fi
+
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Swift version '${VERSION}' does not match expected X.Y.Z format"
+            exit 1
+          fi
+
+          TAG="${VERSION}-RELEASE"
+
+          if gh api "repos/${GH_REPO}/git/refs/tags/${TAG}" > /dev/null; then
+            echo "Tag ${TAG} already exists — skipping build"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG} not found — will build"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "swift_version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build SDK (${{ matrix.arch }})
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x86_64]
+    steps:
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ needs.check-version.outputs.swift_version }}
+
+      - name: Check out swift-sdk-generator
+        uses: actions/checkout@v4
+        with:
+          repository: swiftlang/swift-sdk-generator
+
+      - name: Build SDK
+        env:
+          SWIFT_VERSION: ${{ needs.check-version.outputs.swift_version }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          swift run swift-sdk-generator make-linux-sdk \
+            --no-host-toolchain \
+            --swift-version "${SWIFT_VERSION}-RELEASE" \
+            --sdk-name "${SWIFT_VERSION}-RELEASE_wendyos_${TARGET_ARCH}" \
+            --distribution-name debian \
+            --distribution-version 12
+
+      - name: Zip artifact bundle
+        env:
+          SWIFT_VERSION: ${{ needs.check-version.outputs.swift_version }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          SDK_NAME="${SWIFT_VERSION}-RELEASE_wendyos_${TARGET_ARCH}"
+          cd Bundles
+          zip -r "../${SDK_NAME}.artifactbundle.zip" "${SDK_NAME}.artifactbundle"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-${{ matrix.arch }}
+          path: ${{ needs.check-version.outputs.swift_version }}-RELEASE_wendyos_${{ matrix.arch }}.artifactbundle.zip
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: [check-version, build]
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdk-*
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.check-version.outputs.swift_version }}-RELEASE
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ls *.artifactbundle.zip || { echo "::error::No artifact bundles found in workspace"; exit 1; }
+          gh release create "${TAG}" \
+            --repo "${GH_REPO}" \
+            --title "${TAG}" \
+            --notes "glibc-based Swift Linux SDK for wendyos targeting Debian 12." \
+            *.artifactbundle.zip

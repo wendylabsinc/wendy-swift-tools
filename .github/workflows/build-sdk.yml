@@ -64,16 +64,12 @@ jobs:
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
+    container: swift:${{ needs.check-version.outputs.swift_version }}
     strategy:
       fail-fast: false
       matrix:
         arch: [aarch64, x86_64]
     steps:
-      - name: Set up Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: ${{ needs.check-version.outputs.swift_version }}
-
       - name: Check out swift-sdk-generator
         uses: actions/checkout@v4
         with:

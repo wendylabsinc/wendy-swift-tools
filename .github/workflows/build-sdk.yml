@@ -34,7 +34,7 @@ jobs:
             VERSION="${SWIFT_VERSION_INPUT}"
           else
             VERSION=$(curl -fsSL https://www.swift.org/api/v1/install/releases.json \
-              | jq -r 'sort_by(.date) | last | .name')
+              | jq -r 'sort_by(.date) | last | .tag | ltrimstr("swift-") | rtrimstr("-RELEASE")')
           fi
 
           if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
@@ -65,6 +65,9 @@ jobs:
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container: swift:${{ needs.check-version.outputs.swift_version }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:

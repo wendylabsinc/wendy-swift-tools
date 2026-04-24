@@ -91,6 +91,7 @@ jobs:
             --no-host-toolchain \
             --swift-version "${SWIFT_VERSION}-RELEASE" \
             --sdk-name "${SWIFT_VERSION}-RELEASE_wendyos_${TARGET_ARCH}" \
+            --target-arch "${TARGET_ARCH}" \
             --distribution-name debian \
             --distribution-version 12
 

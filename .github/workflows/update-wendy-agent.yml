@@ -50,12 +50,21 @@ jobs:
             rm "${ASSET}"
           done
 
+      - name: Generate app token
+        id: app-token
+        if: steps.parse.outputs.tag != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.CLI_PUBLISHER_APP_ID }}
+          private-key: ${{ secrets.CLI_PUBLISHER_APP_PRIVATE_KEY }}
+          repositories: wendy-agent
+
       - name: Check out wendy-agent
         if: steps.parse.outputs.tag != ''
         uses: actions/checkout@v4
         with:
           repository: wendylabsinc/wendy-agent
-          token: ${{ secrets.WENDY_AGENT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Update toolchain.go
         if: steps.parse.outputs.tag != ''
@@ -75,7 +84,7 @@ jobs:
       - name: Open PR
         if: steps.parse.outputs.tag != ''
         env:
-          GH_TOKEN: ${{ secrets.WENDY_AGENT_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ steps.parse.outputs.tag }}
           VERSION: ${{ steps.parse.outputs.version }}
         run: |

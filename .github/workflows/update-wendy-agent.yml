@@ -1,0 +1,97 @@
+name: Update wendy-agent SDK reference
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to use (e.g. 6.3.1-RELEASE)'
+        required: true
+        type: string
+
+jobs:
+  update-sdk-ref:
+    name: Open PR in wendy-agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse release tag
+        id: parse
+        env:
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if ! echo "$TAG" | grep -qE '^[0-9]+\.[0-9]+(\.[0-9]+)?-RELEASE$'; then
+            echo "Tag '${TAG}' does not look like a Swift SDK release — skipping"
+            exit 0
+          fi
+          VERSION="${TAG%-RELEASE}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Download artifact bundles and compute checksums
+        id: checksums
+        if: steps.parse.outputs.tag != ''
+        env:
+          TAG: ${{ steps.parse.outputs.tag }}
+          VERSION: ${{ steps.parse.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for ARCH in aarch64 x86_64; do
+            ASSET="${VERSION}-RELEASE_wendyos_${ARCH}.artifactbundle.zip"
+            gh release download "${TAG}" \
+              --repo "${GH_REPO}" \
+              --pattern "${ASSET}" \
+              --output "${ASSET}"
+            SHA=$(sha256sum "${ASSET}" | awk '{print $1}')
+            echo "checksum_${ARCH}=${SHA}" >> "$GITHUB_OUTPUT"
+            rm "${ASSET}"
+          done
+
+      - name: Check out wendy-agent
+        if: steps.parse.outputs.tag != ''
+        uses: actions/checkout@v4
+        with:
+          repository: wendylabsinc/wendy-agent
+          token: ${{ secrets.WENDY_AGENT_TOKEN }}
+
+      - name: Update toolchain.go
+        if: steps.parse.outputs.tag != ''
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
+          TAG: ${{ steps.parse.outputs.tag }}
+          SHA_AARCH64: ${{ steps.checksums.outputs.checksum_aarch64 }}
+          SHA_X86_64: ${{ steps.checksums.outputs.checksum_x86_64 }}
+        run: |
+          set -euo pipefail
+          FILE="go/internal/cli/swifttoolchain/toolchain.go"
+          sed -i "s|DefaultVersion  = \"[^\"]*\"|DefaultVersion  = \"${VERSION}\"|" "$FILE"
+          sed -i "s|WendySDKRelease = \"[^\"]*\"|WendySDKRelease = \"${TAG}\"|" "$FILE"
+          sed -i "s|\"x86_64\":  \"[^\"]*\"|\"x86_64\":  \"${SHA_X86_64}\"|" "$FILE"
+          sed -i "s|\"aarch64\": \"[^\"]*\"|\"aarch64\": \"${SHA_AARCH64}\"|" "$FILE"
+
+      - name: Open PR
+        if: steps.parse.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.WENDY_AGENT_TOKEN }}
+          TAG: ${{ steps.parse.outputs.tag }}
+          VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH="sdk-update/${TAG}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add go/internal/cli/swifttoolchain/toolchain.go
+          git commit -m "chore: bump Swift SDK to ${TAG}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --repo wendylabsinc/wendy-agent \
+            --title "chore: bump Swift SDK to ${TAG}" \
+            --body "Bumps \`DefaultVersion\`, \`WendySDKRelease\`, and \`wendySDKChecksums\` in \`go/internal/cli/swifttoolchain/toolchain.go\` to Swift ${VERSION}." \
+            --base main \
+            --head "$BRANCH"
